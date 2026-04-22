@@ -3,6 +3,7 @@ import struct
 from array import array
 from os.path import join
 import random
+import matplotlib.pyplot as plt
 
 #
 # MNIST Data Loader Class
@@ -172,6 +173,43 @@ def main():
         losses.append(avg_loss)
         accuracies.append(accuracy)
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}')
+
+
+    print('-------------')
+    print('-------------')
+    print('-------------')
+
+    x_test = np.array(x_test) / 255.0
+    x_test_flat = x_test.reshape(x_test.shape[0], -1)
+    y_test_array = np.array(y_test)
+
+    test_predictions = nn.forward(x_test_flat)
+    predicted_classes = np.argmax(test_predictions, axis=1)
+
+    test_accuracy = np.mean(predicted_classes == y_test_array)
+    print(f'Test Accuracy: {test_accuracy:.4f}')
+
+    misclassified_indices = np.where(predicted_classes != y_test_array)[0]
+    print(f'Number of misclassified samples: {len(misclassified_indices)}')
+
+    num_to_show = 9
+    induces_to_show = misclassified_indices[:num_to_show]
+
+    plt.figure(figsize=(10, 10))
+
+    for i, idx in enumerate(induces_to_show):
+        img = x_test[idx]
+        true_label = y_test_array[idx]
+        predicted_label = predicted_classes[idx]
+
+        plt.subplot(3, 3, i + 1)
+        plt.imshow(img.reshape(28, 28), cmap='gray')
+        plt.title(f'True: {true_label}, Pred: {predicted_label}')
+        plt.axis('off')
+
+    plt.suptitle('Misclassified Test Samples',fontsize=16)
+    plt.tight_layout()
+    plt.show() 
 
 if __name__ == "__main__":
     main()
