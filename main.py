@@ -3,7 +3,6 @@ import struct
 from array import array
 from os.path import join
 import random
-import matplotlib.pyplot as plt
 
 #
 # MNIST Data Loader Class
@@ -30,6 +29,7 @@ class MnistDataloader(object):
             if magic != 2051:
                 raise ValueError('Magic number mismatch, expected 2051, got {}'.format(magic))
             image_data = array("B", file.read())
+        
         images = []
         for i in range(size):
             images.append([0] * rows * cols)
@@ -46,15 +46,15 @@ class MnistDataloader(object):
         return (x_train, y_train), (x_test, y_test)
 
 
-class LinearLabyer():
+class LinearLayer():
     def __init__(self, input_size, output_size):
         self.input_size = input_size
         self.output_size = output_size
-        self.weights = np.random.rand(input_size, output_size) * 0.01
+        self.weights = np.random.randn(input_size, output_size) * 0.01
         self.biases = np.zeros((1, output_size))
     
     def forward(self, input_data):
-        self.input_size = input_data
+        self.input_data = input_data 
         return np.dot(input_data, self.weights) + self.biases
     
     def backward(self, output_gradient, learning_rate):
@@ -88,7 +88,7 @@ class CrossEntropyLoss():
         self.predictions = predictions
         self.targets = targets
         m = targets.shape[0]
-        log_likelihood = -np.log(predictions[range(m), targets])
+        log_likelihood = -np.log(predictions[range(m), targets] + 1e-9)
         loss = np.sum(log_likelihood) / m
         return loss
     
@@ -103,32 +103,26 @@ class CrossEntropyLoss():
 
 class NeuralNetwork():
     def __init__(self):
-        self.w1 = LinearLabyer(784, 10)
+        self.w1 = LinearLayer(784, 64) 
         self.activation1 = ReLULayer()
-        self.w2 = LinearLabyer(10, 10)
+        self.w2 = LinearLayer(64, 10)
         self.softmax = SoftmaxLayer()
-        self.activation2 = ReLULayer()
         self.loss_function = CrossEntropyLoss()
 
     def forward(self, x):
         out = self.w1.forward(x)
         out = self.activation1.forward(out)
         out = self.w2.forward(out)
-        out = self.activation2.forward(out)
         out = self.softmax.forward(out)
         return out
 
     def backward(self, loss_grad, learning_rate):
         grad = self.softmax.backward(loss_grad)
-        grad = self.activation2.backward(grad)
         grad = self.w2.backward(grad, learning_rate)
         grad = self.activation1.backward(grad)
         grad = self.w1.backward(grad, learning_rate)
-        
-
 
 def main():
-
     input_path = './dataset'
     training_images_filepath = join(input_path, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
     training_labels_filepath = join(input_path, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
@@ -138,10 +132,8 @@ def main():
     mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
     (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
 
-
-
     nn = NeuralNetwork()
-    learning_rate = 0.1
+    learning_rate = 0.01
     num_epochs = 20
     batch_size = 64
 
@@ -168,6 +160,7 @@ def main():
             predictions = nn.forward(x_batch)
             loss = nn.loss_function.forward(predictions, y_batch)
             epoch_loss += loss
+            
             loss_grad = nn.loss_function.backward()
             nn.backward(loss_grad, learning_rate)
 
@@ -175,10 +168,10 @@ def main():
         predited_classes = np.argmax(full_preds, axis=1)
         accuracy = np.mean(predited_classes == y_train_array)
         avg_loss = epoch_loss / (m / batch_size)
+        
         losses.append(avg_loss)
         accuracies.append(accuracy)
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}')
-
 
 if __name__ == "__main__":
     main()
